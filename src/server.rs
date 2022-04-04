@@ -7,6 +7,7 @@ use std::fs;
 use crate::log;
 use crate::config::Config;
 
+// reads one line from the stream into the buffer
 fn read_line(stream: &mut TcpStream, buf: &mut String) -> Result<usize, std::io::Error> {
     buf.clear();
     let mut char_buf = [0u8];
@@ -31,12 +32,6 @@ enum HttpReadState {
 enum HttpRequest {
     Get { path: String, headers: HashMap<String, String> },
     Unsupported,
-}
-
-struct HttpResponse {
-    status: String,
-    headers: HashMap<String, String>,
-    body: String,
 }
 
 fn read_request(stream: &mut TcpStream) -> Result<HttpRequest, std::io::Error> {
@@ -78,6 +73,12 @@ fn read_request(stream: &mut TcpStream) -> Result<HttpRequest, std::io::Error> {
     } else {
         return Ok(HttpRequest::Unsupported);
     }
+}
+
+struct HttpResponse {
+    status: String,
+    headers: HashMap<String, String>,
+    body: String,
 }
 
 fn write_response(stream: &mut TcpStream, response: HttpResponse) -> Result<(), std::io::Error> {
@@ -123,6 +124,7 @@ fn handle_connection(config: &Config, mut stream: TcpStream) -> Result<(), std::
     headers.insert("Server".to_string(), "rhs/0.1".to_string());
 
     match request {
+        // return 501 on methods other than GET
         HttpRequest::Unsupported => {
             write_response(&mut stream, HttpResponse {
                 status: "501 Not Implemented".to_string(),
@@ -131,6 +133,8 @@ fn handle_connection(config: &Config, mut stream: TcpStream) -> Result<(), std::
             })?;
             return Ok(());
         },
+
+        // read the file and send it
         HttpRequest::Get{ path, headers } => {
             let file_path = config.dir.clone() + &path;
             let (status, body) = read_file(&file_path, false)?;
