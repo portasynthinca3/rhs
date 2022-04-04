@@ -1,7 +1,10 @@
 mod config;
 mod log;
+mod server;
 
 use std::env;
+use std::fs;
+use std::path::Path;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -20,7 +23,7 @@ fn main() {
             }
         },
 
-        // single-argument variant: <dir> (default to ".") OR <port> (default to 80)
+        // single-argument variant: <dir> (default to ".") OR <port> (default to 8080)
         2 => {
             match args[1].parse::<u16>() {
                 Ok(port) => {
@@ -28,7 +31,7 @@ fn main() {
                     (String::from("."), port)
                 },
                 Err(_) => {
-                    (args[1].clone(), 80u16)
+                    (args[1].clone(), 8080u16)
                 }
             }
         },
@@ -40,6 +43,8 @@ fn main() {
         }
     };
 
+    let dir = fs::canonicalize(Path::new(&dir)).unwrap();
+    let dir = dir.to_string_lossy().to_string();
     let config = config::Config { dir, port };
-    dbg!(config);
+    server::serve(config);
 }
